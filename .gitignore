@@ -130,3 +130,7 @@ dmypy.json
 
 # Local MIDI test cases
 zh_pop/
+
+# Debug files
+.DS_Store
+output.mid

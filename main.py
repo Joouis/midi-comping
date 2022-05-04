@@ -3,9 +3,19 @@ import getopt
 from miditoolkit import midi
 
 
-def digest_midi(midi_path):
+def digest_midi(midi_path, output_path):
     midi_obj = midi.parser.MidiFile(midi_path)
+    lead_track = None
+    for track in midi_obj.instruments:
+        if track.name == "Lead":
+            lead_track = track
     print(midi_obj.instruments)
+    assert lead_track != None
+
+    # Only keep lead track now
+    midi_obj.instruments = [lead_track]
+    midi_obj.dump(output_path)
+    print(f'Output file: {output_path}')
 
 def main(argv):
     input_path = ''
@@ -26,10 +36,8 @@ def main(argv):
     print(f'Input file: {input_path}')
     # print(f'Output file: {output_path}')
 
-    if input_path:
-        digest_midi(input_path)
-        print(f'Output file: {output_path}')
-
+    if input_path and output_path:
+        digest_midi(input_path, output_path)
 
 if __name__ == "__main__":
     main(sys.argv[1:])
