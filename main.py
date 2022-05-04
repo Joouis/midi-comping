@@ -3,14 +3,15 @@ import sys
 import getopt
 from miditoolkit import midi
 
-# Pitch of drum means tone in MuseScore
-# 36 - Bass
+# Pitch of drum means tone in MuseScore:
+#   Bass(36), Tom(38, 40), Clap(39), Snare(41), Hi-hat(42)
 
 # TODO:
 # - Time signature changes handler
 # - Expressions:
 #   - crescendo/diminuendo, fills/mute
 #   - Start to play with bass line
+# - 4/4 is too boring
 def gen_drum_track(midi_obj):
     beat_res = midi_obj.ticks_per_beat
     print(beat_res)
@@ -32,13 +33,18 @@ def gen_drum_track(midi_obj):
                 end = end_time
             if beat_count == 4:
                 beat_count = 1
+                pitch = 42
             else:
                 if beat_count == 1:
                     pitch = 36
-                    note = midi.containers.Note(start=start, end=end, velocity=tempo, pitch=pitch)
-                    track.notes.append(note)
+                elif beat_count == 2:
+                    pitch = 42
+                else:
+                    pitch = 38
                 beat_count += 1
 
+            note = midi.containers.Note(start=start, end=end, velocity=tempo, pitch=pitch)
+            track.notes.append(note)
             start = start + beat_res
             end = start + duration
 
