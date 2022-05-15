@@ -1,8 +1,5 @@
-from logging import root
-import math
 import sys
 import getopt
-from matplotlib import markers
 from miditoolkit import midi
 from constants import NOTE_PITCHES, CHORD_TYPE_PITCHES
 
@@ -52,10 +49,8 @@ def gen_drum_track(midi_obj):
 
     return track
 
-def get_piano_track(midi_obj):
-    beat_res = midi_obj.ticks_per_beat
-    track = midi.containers.Instrument(program=1, is_drum=False, name="Piano")
-
+#     track = midi.containers.Instrument(program=33, is_drum=False, name="Bass")
+def tempos_markers_handler(midi_obj, cb):
     for idx, tc in enumerate(midi_obj.tempo_changes):
         # TODO: duplicate from gen_drum_track, move it to a util func later
         tempo = round(tc.tempo)
@@ -79,32 +74,40 @@ def get_piano_track(midi_obj):
                 print(f'Unrecognized note {root_note} or chord type {chord_type}')
                 continue
 
-            base_pitch = NOTE_PITCHES[root_note]
-            chord_pitches = CHORD_TYPE_PITCHES[chord_type]
-            chord_note_num = len(chord_pitches)
+            cb(tempo, root_note, chord_type, chord_start_time, chord_end_time)
 
-            start = chord_start_time
-            duration = round(beat_res)
+def get_piano_track(midi_obj):
+    beat_res = midi_obj.ticks_per_beat
+    track = midi.containers.Instrument(program=1, is_drum=False, name="Piano")
+
+    def note_gen(tempo, root_note, chord_type, chord_start_time, chord_end_time):
+        base_pitch = NOTE_PITCHES[root_note]
+        chord_pitches = CHORD_TYPE_PITCHES[chord_type]
+        chord_note_num = len(chord_pitches)
+
+        start = chord_start_time
+        duration = round(beat_res)
+        end = start + duration
+        chord_note_idx = 0
+        step = 1
+
+        while start < chord_end_time:
+            if end >= chord_end_time:
+                end = chord_end_time
+            if chord_note_idx == chord_note_num - 1:
+                step = -1
+            elif chord_note_idx == -1:
+                chord_note_idx = 1
+                step = 1
+
+            pitch = base_pitch + chord_pitches[chord_note_idx]
+            note = midi.containers.Note(start=start, end=end, velocity=tempo, pitch=pitch)
+            track.notes.append(note)
+            start = start + beat_res
             end = start + duration
-            chord_note_idx = 0
-            step = 1
+            chord_note_idx += step
 
-            while start < chord_end_time:
-                if end >= chord_end_time:
-                    end = chord_end_time
-                if chord_note_idx == chord_note_num - 1:
-                    step = -1
-                elif chord_note_idx == -1:
-                    chord_note_idx = 1
-                    step = 1
-
-                pitch = base_pitch + chord_pitches[chord_note_idx]
-                note = midi.containers.Note(start=start, end=end, velocity=tempo, pitch=pitch)
-                track.notes.append(note)
-                start = start + beat_res
-                end = start + duration
-                chord_note_idx += step
-
+    tempos_markers_handler(midi_obj, note_gen)
     return track
 
 def digest_midi(midi_path, output_path):
