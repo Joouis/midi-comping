@@ -3,8 +3,6 @@ import getopt
 from miditoolkit import midi
 from constants import NOTE_PITCHES, CHORD_TYPE_PITCHES
 
-# Pitch of drum means tone in MuseScore:
-#   Bass(36), Tom(38, 40), Clap(39), Snare(41), Hi-hat(42)
 
 # TODO:
 # - Expressions:
@@ -69,6 +67,7 @@ def tempos_markers_handler(midi_obj, cb):
             chord_start_time = tempo_start_time if chord_start_time < tempo_start_time else chord_start_time
             chord_end_time = tempo_end_time if tempo_end_time < chord_end_time else chord_end_time
 
+            # Note: chord could be wrong...
             [root_note, chord_type] = marker.text.split('_')
             if root_note is None or chord_type is None or root_note not in NOTE_PITCHES or chord_type not in CHORD_TYPE_PITCHES:
                 print(f'Unrecognized note {root_note} or chord type {chord_type}')
@@ -106,6 +105,8 @@ def get_bass_track(midi_obj):
     return track
 
 
+# TODO:
+#   - How to control volume?
 def get_piano_track(midi_obj):
     beat_res = midi_obj.ticks_per_beat
     track = midi.containers.Instrument(program=1, is_drum=False, name="Piano")
@@ -130,6 +131,7 @@ def get_piano_track(midi_obj):
                 chord_note_idx = 1
                 step = 1
 
+            # TODO: random pick notes from chord?
             pitch = base_pitch + chord_pitches[chord_note_idx]
             note = midi.containers.Note(start=start, end=end, velocity=tempo, pitch=pitch)
             track.notes.append(note)
