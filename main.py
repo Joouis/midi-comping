@@ -1,7 +1,7 @@
 import sys
 import getopt
 from miditoolkit import midi
-from constants import NOTE_PITCHES, CHORD_TYPE_PITCHES
+from constants import NOTE_PITCHES, CHORD_TYPE_PITCHES, DEFAULT_VELOCITY
 
 
 # TODO:
@@ -9,14 +9,11 @@ from constants import NOTE_PITCHES, CHORD_TYPE_PITCHES
 #   - crescendo/diminuendo, fills/mute
 #   - Start to play with bass line
 # - 4/4 is too boring, basically change it if tempo is faster than xx?
-def gen_drum_track(midi_obj):
+def gen_drum_track(midi_obj, velocity=DEFAULT_VELOCITY):
     beat_res = midi_obj.ticks_per_beat
     # Program means tone?
     track = midi.containers.Instrument(program=1, is_drum=True, name="Basic percussion")
     for idx, tc in enumerate(midi_obj.tempo_changes):
-        tempo = round(tc.tempo)
-        # Tempo need to be in range [0, 127], why?
-        tempo = 127 if tempo > 127 else tempo
         start_time = round(tc.time)
         end_time = round(midi_obj.tempo_changes[idx + 1].time) if idx + 1 < len(midi_obj.tempo_changes) else midi_obj.max_tick
         start = start_time
@@ -40,7 +37,7 @@ def gen_drum_track(midi_obj):
                     pitch = 38
                 beat_count += 1
 
-            note = midi.containers.Note(start=start, end=end, velocity=tempo, pitch=pitch)
+            note = midi.containers.Note(start=start, end=end, velocity=velocity, pitch=pitch)
             track.notes.append(note)
             start = start + beat_res
             end = start + duration
@@ -76,7 +73,7 @@ def tempos_markers_handler(midi_obj, cb):
             cb(tempo, root_note, chord_type, chord_start_time, chord_end_time)
 
 
-def get_bass_track(midi_obj):
+def get_bass_track(midi_obj, velocity=DEFAULT_VELOCITY):
     beat_res = midi_obj.ticks_per_beat
     track = midi.containers.Instrument(program=33, is_drum=False, name="Bass")
 
@@ -94,7 +91,7 @@ def get_bass_track(midi_obj):
 
             if beat_count == 1 or beat_count == 3:
                 pitch = base_pitch if beat_count == 1 else base_pitch + 5
-                note = midi.containers.Note(start=start, end=end, velocity=tempo, pitch=pitch)
+                note = midi.containers.Note(start=start, end=end, velocity=velocity, pitch=pitch)
                 track.notes.append(note)
 
             beat_count = 1 if beat_count == 4 else beat_count + 1
@@ -105,9 +102,7 @@ def get_bass_track(midi_obj):
     return track
 
 
-# TODO:
-#   - How to control volume?
-def get_piano_track(midi_obj):
+def get_piano_track(midi_obj, velocity=DEFAULT_VELOCITY):
     beat_res = midi_obj.ticks_per_beat
     track = midi.containers.Instrument(program=1, is_drum=False, name="Piano")
 
@@ -133,7 +128,7 @@ def get_piano_track(midi_obj):
 
             # TODO: random pick notes from chord?
             pitch = base_pitch + chord_pitches[chord_note_idx]
-            note = midi.containers.Note(start=start, end=end, velocity=tempo, pitch=pitch)
+            note = midi.containers.Note(start=start, end=end, velocity=velocity, pitch=pitch)
             track.notes.append(note)
             start = start + beat_res
             end = start + duration
@@ -154,10 +149,13 @@ def digest_midi(midi_path, output_path):
 
     print(midi_obj.instruments)
 
+    # TODO: what if velocity changes?
+    default_velocity = lead_track.notes[0].velocity or DEFAULT_VELOCITY
+
     # TODO: make instruments optional or simple/middle level
-    drum_track = gen_drum_track(midi_obj)
-    bass_track = get_bass_track(midi_obj)
-    piano_track = get_piano_track(midi_obj)
+    drum_track = gen_drum_track(midi_obj, default_velocity)
+    bass_track = get_bass_track(midi_obj, default_velocity - 16)
+    piano_track = get_piano_track(midi_obj, default_velocity - 16)
 
     # Only keep lead track now
     midi_obj.instruments = [lead_track, drum_track, bass_track, piano_track]
