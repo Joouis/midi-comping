@@ -10,7 +10,7 @@ from constants import NOTE_PITCHES, CHORD_TYPE_PITCHES
 # - Expressions:
 #   - crescendo/diminuendo, fills/mute
 #   - Start to play with bass line
-# - 4/4 is too boring
+# - 4/4 is too boring, basically change it if tempo is faster than xx?
 def gen_drum_track(midi_obj):
     beat_res = midi_obj.ticks_per_beat
     # Program means tone?
@@ -77,31 +77,28 @@ def tempos_markers_handler(midi_obj, cb):
             cb(tempo, root_note, chord_type, chord_start_time, chord_end_time)
 
 
-# TODO:
-#   - note duration adjustment
-#   - note timing sounds not right
 def get_bass_track(midi_obj):
     beat_res = midi_obj.ticks_per_beat
     track = midi.containers.Instrument(program=33, is_drum=False, name="Bass")
 
     def note_gen(tempo, root_note, chord_type, chord_start_time, chord_end_time):
-        base_pitch = NOTE_PITCHES[root_note]
+        base_pitch = NOTE_PITCHES[root_note] - 36
 
         start = chord_start_time
-        duration = round(beat_res * 0.5)
+        duration = round(beat_res * 1.6)
         end = start + duration
         beat_count = 1
 
         while start < chord_end_time:
             if end >= chord_end_time:
                 end = chord_end_time
-            beat_count = 1 if beat_count == 4 else beat_count + 1
 
             if beat_count == 1 or beat_count == 3:
-                pitch = base_pitch - 24
+                pitch = base_pitch if beat_count == 1 else base_pitch + 5
                 note = midi.containers.Note(start=start, end=end, velocity=tempo, pitch=pitch)
                 track.notes.append(note)
 
+            beat_count = 1 if beat_count == 4 else beat_count + 1
             start = start + beat_res
             end = start + duration
     
