@@ -49,7 +49,7 @@ def gen_drum_track(midi_obj):
 
     return track
 
-#     track = midi.containers.Instrument(program=33, is_drum=False, name="Bass")
+
 def tempos_markers_handler(midi_obj, cb):
     for idx, tc in enumerate(midi_obj.tempo_changes):
         # TODO: duplicate from gen_drum_track, move it to a util func later
@@ -75,6 +75,36 @@ def tempos_markers_handler(midi_obj, cb):
                 continue
 
             cb(tempo, root_note, chord_type, chord_start_time, chord_end_time)
+
+
+def get_bass_track(midi_obj):
+    beat_res = midi_obj.ticks_per_beat
+    track = midi.containers.Instrument(program=33, is_drum=False, name="Bass")
+
+    def note_gen(tempo, root_note, chord_type, chord_start_time, chord_end_time):
+        base_pitch = NOTE_PITCHES[root_note]
+
+        start = chord_start_time
+        duration = round(beat_res * 0.5)
+        end = start + duration
+        beat_count = 1
+
+        while start < chord_end_time:
+            if end >= chord_end_time:
+                end = chord_end_time
+            beat_count = 1 if beat_count == 4 else beat_count + 1
+
+            if beat_count == 1 or beat_count == 3:
+                pitch = base_pitch - 24
+                note = midi.containers.Note(start=start, end=end, velocity=tempo, pitch=pitch)
+                track.notes.append(note)
+
+            start = start + beat_res
+            end = start + duration
+    
+    tempos_markers_handler(midi_obj, note_gen)
+    return track
+
 
 def get_piano_track(midi_obj):
     beat_res = midi_obj.ticks_per_beat
@@ -110,6 +140,7 @@ def get_piano_track(midi_obj):
     tempos_markers_handler(midi_obj, note_gen)
     return track
 
+
 def digest_midi(midi_path, output_path):
     midi_obj = midi.parser.MidiFile(midi_path)
 
@@ -121,13 +152,16 @@ def digest_midi(midi_path, output_path):
 
     print(midi_obj.instruments)
 
+    # TODO: make instruments optional or simple/middle level
     drum_track = gen_drum_track(midi_obj)
+    bass_track = get_bass_track(midi_obj)
     piano_track = get_piano_track(midi_obj)
 
     # Only keep lead track now
-    midi_obj.instruments = [lead_track, drum_track, piano_track]
+    midi_obj.instruments = [lead_track, drum_track, bass_track, piano_track]
     midi_obj.dump(output_path)
     print(f'Output file: {output_path}')
+
 
 def main(argv):
     input_path = ''
