@@ -77,6 +77,9 @@ def tempos_markers_handler(midi_obj, cb):
             cb(tempo, root_note, chord_type, chord_start_time, chord_end_time)
 
 
+# TODO:
+#   - note duration adjustment
+#   - note timing sounds not right
 def get_bass_track(midi_obj):
     beat_res = midi_obj.ticks_per_beat
     track = midi.containers.Instrument(program=33, is_drum=False, name="Bass")
